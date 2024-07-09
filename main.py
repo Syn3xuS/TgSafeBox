@@ -203,7 +203,7 @@ def _info(args):
 	
 	print(f"Информация о коробке '{configname}':")
 	print(f"  Имя: {name}")
-	print(f"  Описание: {'\n\t\t'+about if about else about}")
+	print( "  Описание: {}".format("\n\t\t"+about if about else about))
 	print(f"  Дата создания: {date}")
 	print(f"  Ключ шифрования: {key}")
 	print(f"  Общий размер: {size} байт")

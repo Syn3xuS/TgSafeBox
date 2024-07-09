@@ -9,7 +9,7 @@ setup(
 	install_requires=[
 		'tgcrypto',
 		'pyrogram',
-		'cryptography'
+		'pycryptodome'
 	],
 	entry_points={
 		'console_scripts': [
@@ -19,5 +19,5 @@ setup(
 	author='Syn3xuS',
 	description='A utility for securely storing files in Telegram',
 	url='https://github.com/Syn3xuS/TgSafeBox',
-	python_requires='>=3.6',
+	python_requires='>=3.11.9',
 )

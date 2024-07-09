@@ -12,7 +12,7 @@
 
 ## Предварительные требования
 
--   Python 3.12.4 или выше (Возможно будет работать и с версиями ниже)
+-   Python 3.11.9 или выше (Возможно будет работать и с версиями ниже)
 -   Необходимые пакеты Python можно установить с помощью `pip install -r requirements.txt`
 
 ## Установка
@@ -21,7 +21,9 @@
 
 `cd TgSafeBox`
 
-`pip setup.py install`
+`pip install -r requirements.txt`
+
+`python setup.py install`
 
 ## Использование
 
@@ -62,7 +64,7 @@
 
     прим.: MyBoxName только в этой функции без расширения .tsb, в остальных случаях писать полностью.
 
-`tgsafebox -upload MyClient 987654321 MyBoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg`
+`tgsafebox -upload MyClient -100987654321 MyBoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg`
 
 -   Скачивание файлов из чата Telegram:
 

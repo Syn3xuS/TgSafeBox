@@ -15,6 +15,14 @@
 -   Python 3.12.4 или выше (Возможно будет работать и с версиями ниже)
 -   Необходимые пакеты Python можно установить с помощью `pip install -r requirements.txt`
 
+## Установка
+
+`git clone https://github.com/Syn3xuS/TgSafeBox`
+
+`cd TgSafeBox`
+
+`pip setup.py install`
+
 ## Использование
 
 ### Команды
@@ -48,34 +56,25 @@
 
 -   Инициализация клиента Telegram:
 
-```
-python main.py -client MyClient 123456789 abcdef1234567890abcdef1234567890
-```
+`tgsafebox -client MyClient 123456789 abcdef1234567890abcdef1234567890`
 
 -   Загрузка файлов/директорий в чат Telegram:
-    <br>прим.: MyBoxName только в этой функции без расширения .tsb, в остальных случаях писать полностью.
 
-```
-python main.py -upload MyClient 987654321 MyBoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg
-```
+    прим.: MyBoxName только в этой функции без расширения .tsb, в остальных случаях писать полностью.
+
+`tgsafebox -upload MyClient 987654321 MyBoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg`
 
 -   Скачивание файлов из чата Telegram:
 
-```
-python main.py -download MyClient MyBoxName /выходная/директория
-```
+`tgsafebox -download MyClient MyBoxName /выходная/директория`
 
 -   Получение информации о 'коробке':
 
-```
-python main.py -info MyBoxName
-```
+`tgsafebox -info MyBoxName`
 
 -   Установка описания для 'коробки' из текстового файла:
 
-```
-python main.py -setabout MyBoxName /путь/к/about.txt
-```
+`tgsafebox -setabout MyBoxName /путь/к/about.txt`
 
 ## Автор
 

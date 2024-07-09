@@ -17,7 +17,10 @@ def LoadFile(app, chat_id, message_id, outdir='.'):
 	with app:
 		for _ in app.get_dialogs(): pass
 		msg = app.get_messages(chat_id, message_id)
-		app.download_media(msg, file_name=os.path.join(outdir, msg.document.file_name))
+		file = app.download_media(msg, in_memory=True)
+		with open(os.path.join(outdir, msg.document.file_name), 'wb') as f:
+			f.write(bytes(file.getbuffer()))
+
 
 def CheckChatID(app, chat_id):
 	with app:

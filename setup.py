@@ -19,10 +19,5 @@ setup(
 	author='Syn3xuS',
 	description='A utility for securely storing files in Telegram',
 	url='https://github.com/Syn3xuS/TgSafeBox',
-	classifiers=[
-		'Programming Language :: Python :: 3',
-		'License :: OSI Approved :: MIT License',
-		'Operating System :: OS Independent',
-	],
 	python_requires='>=3.6',
 )

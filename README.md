@@ -29,54 +29,59 @@
 
 ### Команды
 
-1. **-client <ClientName> <api_id> <api_hash>**
+-   `client list`
 
-    - Инициализирует клиент Telegram с указанными API ключами.
-    - api id и hash брать -> [тут](https://my.telegram.org/auth)
-    - Никому не передавайте ваши api_id и api_hash, а так же уже авторизованные .session файлы.
+    Выводит список клиентов в формате:
 
-2. **-upload <ClientName> <chat_id> <name> <file_or_directory_paths>**
+        <client_number> - <id> - <hash>
 
-    - Загружает указанные файлы или директории в чат Telegram.
+-   `client add <id> <hash>`
 
-3. **-download <ClientName> <config_name> <output_directory>**
+    -   Инициализирует клиент Telegram с указанными API ключами.
+    -   api_id и api_hash брать -> [тут](https://my.telegram.org/auth)
+    -   Никому не передавайте ваши api_id и api_hash
 
-    - Скачивает файлы из чата Telegram с использованием указанного конфигурационного файла.
+-   `client del <number>`
 
-4. **-info <config_name>**
+    -   Удаляет клиент из списка
 
-    - Получает подробную информацию о сконфигурированной 'коробке' (tsb файл).
+-   `upload <client_number> <chat_id> <box_name> <file_or_directory_paths>`
 
-5. **-setabout <config_name> <about_file_path>**
+    -   `-af` - флаг для указания файла с описанием. (Необязателен)
 
-    - Устанавливает описание для конфигурационного файла из текстового файла.
+    -   Загружает указанные файлы или директории в чат Telegram.
 
-6. **-h, -help**
-    - Отображает справочную информацию.
+-   `download <client_number> <box_name> <output_directory>`
+
+    -   `-o` - флаг для указания выходной директории (Необязателен)
+
+    -   Скачивает файлы из чата Telegram с использованием указанного конфигурационного файла.
+
+-   `info <box_name>`
+
+    -   Получает подробную информацию о сконфигурированной 'коробке' (tsb файл).
+
+-   `-h`, `-help`
+
+    -   Отображает справочную информацию.
 
 ### Примеры Использования
 
--   Инициализация клиента Telegram:
+`tgsafebox -client list`
 
-`tgsafebox -client MyClient 123456789 abcdef1234567890abcdef1234567890`
+`tgsafebox -client add 123456789 abcdef1234567890abcdef1234567890`
 
--   Загрузка файлов/директорий в чат Telegram:
+`tgsafebox -client del 1`
 
-    прим.: MyBoxName только в этой функции без расширения .tsb, в остальных случаях писать полностью.
+`tgsafebox -upload 1 -100987654321 BoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg`
 
-`tgsafebox -upload MyClient -100987654321 MyBoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg`
+`tgsafebox -upload 1 -100987654321 BoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg -af ./MyTexts/aboutforbox1.txt`
 
--   Скачивание файлов из чата Telegram:
+`tgsafebox -download 1 ./myboxs/Box1.tsb /выходная/директория`
 
-`tgsafebox -download MyClient MyBoxName /выходная/директория`
+`tgsafebox -info ./myboxs/Box1.tsb`
 
--   Получение информации о 'коробке':
-
-`tgsafebox -info MyBoxName`
-
--   Установка описания для 'коробки' из текстового файла:
-
-`tgsafebox -setabout MyBoxName /путь/к/about.txt`
+`tgsafebox -info ./myboxs/Box1.tsb -o ./outdir`
 
 ## Автор
 

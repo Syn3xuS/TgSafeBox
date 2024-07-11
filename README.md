@@ -77,11 +77,12 @@
 
 `tgsafebox upload 1 -100987654321 BoxName /путь/к/файл1.txt /путь/к/директория1 /путь/к/файл2.jpg -af ./MyTexts/aboutforbox1.txt`
 
-`tgsafebox download 1 ./myboxs/Box1.tsb /выходная/директория`
+`tgsafebox download 1 ./myboxs/Box1.tsb`
+
+`tgsafebox download 1 ./myboxs/Box1.tsb -o /выходная/директория`
 
 `tgsafebox info ./myboxs/Box1.tsb`
 
-`tgsafebox info ./myboxs/Box1.tsb -o ./outdir`
 
 ## Автор
 

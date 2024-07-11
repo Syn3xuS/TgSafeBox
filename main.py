@@ -1,84 +1,103 @@
-import sys, datetime, logging, platform
-import crypto, fsm, tg
+import logging, argparse, datetime
+from tools import crypto, fsm, tg, console
 
+#Настраиваем логирование
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler('log.txt', encoding='UTF-8')
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+print_handler = logging.StreamHandler()
+print_handler.setFormatter(logging.Formatter('%(message)s'))
+logger.addHandler(file_handler)
+logger.addHandler(print_handler)
 
-def clear_console():
-	fsm.os.system('cls' if fsm.os.name == 'nt' else 'clear')
-
-def update_console(status, current_file, current_part, current_line, progress, logs, errors):
-	clear_console()
-	print("--------------------------------------------")
-	print("      TgSafeBox Utility    by Syn3xuS       ")
-	print("--------------------------------------------")
-	print(f"Дата и время: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-	print("--------------------------------------------")
-	print(f"Статус: {status}")
-	print()
-	print(f"Действие: {logs[-1] if logs else 'Нет данных'}")
-	print(f"Файл: {current_file}")
-	print(f"Часть: {current_part}")
-	print(f"Строка: {current_line}")
-	print("--------------------------------------------")
-	print("Логи:")
-	for log in logs[-10:]:
-		print(log)
-	print("--------------------------------------------")
-	print("Ошибки и предупреждения:")
-	for error in errors:
-		print(error)
-	print("--------------------------------------------")
-	print("Прогресс выполнения:")
-	print(f"[{'#' * (progress // 10)}{'-' * (10 - progress // 10)}] {progress}%")
-	print("--------------------------------------------")
 
 def _client(args):
-	if len(args) != 5:
-		logger.error("Неверное количество аргументов. Использование: -client <ClientName> <api_id> <api_hash>")
-		raise Exception("Неверное количество аргументов. Использование: -client <ClientName> <api_id> <api_hash>")
-	logger.info("Создание и инициализация клиента Telegram")
-	tg.GetClient(args[2], int(args[3]), args[4])
+	fsm.CreateConfig()
+	match args.client_command:
+		case 'list':
+			clients = fsm.ClientList()
+			print("СПИСОК КЛИЕНТОВ:")
+			if (not clients):
+				print('\tСпискок клиентов пуст!')
+				return
+			for number, client in enumerate(clients):
+				print("\t #{} - api_id{} - api_hash{}".format(number+1, client[0], client[1]))
+		case 'add':
+			clients = fsm.ClientList()
+			if(clients):
+				for client in clients:
+					if(args.id==client[0] and args.hash==client[1]):
+						print("Такой клиент уже есть в конфиге")
+						print("> #{} - api_id{} - api_hash{}".format(number+1, client[0], client[1]))
+						return
+			session, client = tg.GetClient(args.id, args.hash)
+			fsm.ClientAdd(args.id, args.hash, session)
+		case 'del':
+			clients = fsm.ClientList()
+			if(not clients):
+				print('\tСпискок клиентов пуст!')
+				return
+			for number, client in enumerate(clients):
+				if(args.number==number+1):
+					fsm.ClientDel(args.number)
+					print("Клиент успешно удалён")
+					print("> #{} - api_id={} - api_hash={}".format(number+1, client[0], client[1]))
+					return
+			print("Клиент не найден")
+
 
 def _upload(args):
-	print(args)
-	if len(args) < 6:
-		logger.error("Неверное количество аргументов. Использование: -upload <ClientName> <chat_id> <name> <file_or_directory_paths>")
-		raise Exception("Неверное количество аргументов. Использование: -upload <ClientName> <chat_id> <name> <file_or_directory_paths>")
-	app = tg.GetClient(ClientName=args[2])
+	clients = fsm.ClientList()
+	session = None
+	for number, client in enumerate(clients):
+		if(args.client_number==number+1):
+			session = client[2]
+			break
+	if(not session):
+		print("Аккаунт не найден")
+		return
+	ses_str, app = tg.GetClient(session_string=session)
+	chatid = args.cloud_id
 	
-	if not tg.CheckChatID(app, args[3]):
-		logger.error("Аккаунт не имеет доступа к чату либо чата не существует")
+	if not tg.CheckChatID(app, chatid):
+		print("Аккаунт не имеет доступа к чату либо чата не существует")
 		raise Exception("Аккаунт не имеет доступа к чату либо чата не существует")
 	
-	chatid = args[3]
-	name = args[4]
-	configname = f"{args[4]}.tsb"
+	name = args.box_name
+	configname = f"{name}.tsb"
 	key = crypto.GenKey()
 	date = datetime.datetime.now()
 	size = 0
-	dirnames, filepaths, filenames = fsm.get_paths(args[5:])
+	dirnames, filepaths, filenames = fsm.get_paths(args.paths)
 	parts = 0
 	statuspart = 0
 	logs = []
 	errors = []
 
-	fsm.CreateBoxConfig(configname)
-	fsm.SetBoxConfig(configname, 'Name', name)
-	fsm.SetBoxConfig(configname, 'Date', str(date))
-	fsm.SetBoxConfig(configname, 'Key', key)
-	fsm.SetBoxConfig(configname, 'Dirs', len(dirnames))
-	fsm.SetBoxConfig(configname, 'Files', len(filepaths))
-	fsm.SetBoxConfig(configname, 'Cloud_id', chatid)
+	fsm.CreateBox(configname)
+	fsm.SetBox(configname, 'Name', name)
+	fsm.SetBox(configname, 'Date', str(date))
+	fsm.SetBox(configname, 'Key', key)
+	fsm.SetBox(configname, 'Dirs', len(dirnames))
+	fsm.SetBox(configname, 'Files', len(filepaths))
+	fsm.SetBox(configname, 'Cloud_id', chatid)
+	if args.about_filepath:
+		if not fsm.os.path.isdir(args.about_filepath):
+			raise Exception(f"Файл {args.about_filepath} не существует.")
+
+		with open(args.about_filepath, 'r', encoding='utf-8') as file:
+			about_text = file.read()
+		fsm.SetBox(configname, 'About', about_text)
 
 	for dr in dirnames:
-		fsm.SetDirInBoxConfig(configname, dr)
+		fsm.SetDirInBox(configname, dr)
 
 	for i, file in enumerate(filepaths):
 		filedict = {}
 		status = f"Запись файла {i + 1}/{len(filepaths)}: {file}"
 		logs.append(f"[INFO] {status}")
-		update_console(status, file, parts, statuspart, int((i + 1) / len(filepaths) * 100), logs, errors)
+		console.update_console(status, file, parts, statuspart, int((i + 1) / len(filepaths) * 100), logs, errors)
 		with open(file, 'rb') as fin:
 			while True:
 				resin = fin.read(1 * 1024 * 1024)
@@ -86,14 +105,14 @@ def _upload(args):
 					if i == len(filenames) - 1:
 						status = f'Отправка части: {name}-{parts}'
 						logs.append(f"[INFO] {status}")
-						update_console(status, file, parts, statuspart, int((i + 1) / len(filepaths) * 100), logs, errors)
+						console.update_console(status, file, parts, statuspart, int((i + 1) / len(filepaths) * 100), logs, errors)
 						msgid = tg.SendFile(app, chatid, f'{name}-{parts}')
-						fsm.SetPartInBoxConfig(configname, f'{name}-{parts}', msgid)
+						fsm.SetPartInBox(configname, f'{name}-{parts}', msgid)
 						fsm.os.remove(f'{name}-{parts}')
 					
 					filesize = fsm.os.path.getsize(file)
 					size += filesize
-					fsm.SetFileInBoxConfig(configname, filenames[i], str(filesize), filedict)
+					fsm.SetFileInBox(configname, filenames[i], str(filesize), filedict)
 					break
 
 				fsm.BoxPartWrite(f'{name}-{parts}', str(statuspart), crypto.Encrypt(resin, key))
@@ -105,49 +124,57 @@ def _upload(args):
 				if fsm.os.path.getsize(f'{name}-{parts}') > 32 * 1024 * 1024:
 					status = f'Отправка части: {name}-{parts}'
 					logs.append(f"[INFO] {status}")
-					update_console(status, file, parts, statuspart, int((i + 1) / len(filepaths) * 100), logs, errors)
+					console.update_console(status, file, parts, statuspart, int((i + 1) / len(filepaths) * 100), logs, errors)
 					msgid = tg.SendFile(app, chatid, f'{name}-{parts}')
-					fsm.SetPartInBoxConfig(configname, f'{name}-{parts}', msgid)
+					fsm.SetPartInBox(configname, f'{name}-{parts}', msgid)
 					fsm.os.remove(f'{name}-{parts}')
 					parts += 1
 
-	fsm.SetBoxConfig(configname, 'Size', size)
-	fsm.SetBoxConfig(configname, 'Parts', parts)
+	fsm.SetBox(configname, 'Size', size)
+	fsm.SetBox(configname, 'Parts', parts)
 	status = "Успешно загружено!"
 	logs.append(f"[INFO] {status}")
-	update_console(status, "", 0, 0, 100, logs, errors)
+	console.update_console(status, "", 0, 0, 100, logs, errors)
 
 def _download(args):
-	if len(args) != 5:
-		logger.error("Неверное количество аргументов. Использование: -download <ClientName> <config_name> <output_directory>")
-		raise Exception("Неверное количество аргументов. Использование: -download <ClientName> <config_name> <output_directory>")
-
-	app = tg.GetClient(ClientName=args[2])
-	configname = args[3]
-	name = fsm.GetParameterFromBoxConfig(configname, 'Name')
-	outdir = fsm.os.path.join(fsm.os.path.realpath(args[4]), name)
+	clients = fsm.ClientList()
+	session = None
+	for number, client in enumerate(clients):
+		if(args.client_number==number+1):
+			session = client[2]
+			break
+	if(not session):
+		print("Аккаунт не найден")
+		return
+	ses_str, app = tg.GetClient(session_string=session)
+	configname = fsm.os.path.realpath(args.box_name)
+	if (not fsm.os.path.isfile(configname)):
+		print("Такой коробки нет!")
+		return
+	name = fsm.GetParameterFromBox(configname, 'Name')
+	outdir = fsm.os.path.join(fsm.os.path.realpath(args.out_dir), name)
 	fsm.os.makedirs(outdir, exist_ok=True)
-	chatid = fsm.GetParameterFromBoxConfig(configname, 'Cloud_id')
-	key = fsm.GetParameterFromBoxConfig(configname, 'Key')
+	chatid = fsm.GetParameterFromBox(configname, 'Cloud_id')
+	key = fsm.GetParameterFromBox(configname, 'Key')
 	logs = []
 	errors = []
 
 	if not tg.CheckChatID(app, chatid):
 		error = "Аккаунт не имеет доступа к чату либо чата не существует"
-		logger.error(error)
+		print(error)
 		errors.append(f"[ERROR] {error}")
 		raise Exception(error)
 
-	for dr in fsm.GetDirsFromBoxConfig(configname):
+	for dr in fsm.GetDirsFromBox(configname):
 		fsm.os.makedirs(fsm.os.path.join(outdir, dr), exist_ok=True)
 
-	total_size = int(fsm.GetParameterFromBoxConfig(configname, 'Size'))  # общий размер файлов
+	total_size = int(fsm.GetParameterFromBox(configname, 'Size'))  # общий размер файлов
 	downloaded_size = 0
 
 	current_chunk = None
 	current_chunk_file = None
 
-	for file_info in fsm.GetFilesFromBoxConfig(configname):
+	for file_info in fsm.GetFilesFromBox(configname):
 		filename = fsm.os.path.join(outdir, file_info[0])
 		size = int(file_info[1])
 		chunks_needed = file_info[2].keys()
@@ -159,9 +186,9 @@ def _download(args):
 				status = f"Скачивание части: {name}-{chunk_number}"
 				logs.append(f"[INFO] {status}")
 				progress = int(downloaded_size / total_size * 100)
-				update_console(status, filename, chunk_number, 0, progress, logs, errors)
+				console.update_console(status, filename, chunk_number, 0, progress, logs, errors)
 				current_chunk_file = chunk_number
-				tg.LoadFile(app, chatid, fsm.GetPartInBoxConfig(configname, f'{name}-{chunk_number}'))
+				tg.LoadFile(app, chatid, fsm.GetPartInBox(configname, f'{name}-{chunk_number}'))
 				current_chunk = chunk_number
 			lines = file_info[2][chunk_number]
 			for line in lines:
@@ -172,36 +199,33 @@ def _download(args):
 			status = f"Обработка строк {lines} в части {chunk_number} для файла {filename}"
 			logs.append(f"[INFO] {status}")
 			progress = int(downloaded_size / total_size * 100)
-			update_console(status, filename, chunk_number, line, progress, logs, errors)
+			console.update_console(status, filename, chunk_number, line, progress, logs, errors)
 		fout.close()
 
 	if current_chunk_file:
 		fsm.os.remove(f"{name}-{current_chunk_file}")
 	status = "Успешно загружено!"
 	logs.append(f"[INFO] {status}")
-	update_console(status, "", 0, 0, 100, logs, errors)
+	console.update_console(status, "", 0, 0, 100, logs, errors)
 
 
 def _info(args):
-	if len(args) != 3:
-		logger.error("Неверное количество аргументов для получения информации.")
-		raise Exception("Неверное количество аргументов для получения информации.")
+	configname = args.box_name
+	if (not fsm.os.path.isfile(configname)): raise Exception("Такого файда нет!")
+	name = fsm.GetParameterFromBox(configname, 'Name')
+	about = fsm.GetParameterFromBox(configname, 'About')
+	date = fsm.GetParameterFromBox(configname, 'Date')
+	key = fsm.GetParameterFromBox(configname, 'Key')
+	size = fsm.GetParameterFromBox(configname, 'Size')
+	parts = fsm.GetParameterFromBox(configname, 'Parts')
+	dirs_count = fsm.GetParameterFromBox(configname, 'Dirs')
+	files_count = fsm.GetParameterFromBox(configname, 'Files')
+	cloud_id = fsm.GetParameterFromBox(configname, 'Cloud_id')
 	
-	configname = args[2]
-	name = fsm.GetParameterFromBoxConfig(configname, 'Name')
-	about = fsm.GetParameterFromBoxConfig(configname, 'About')
-	date = fsm.GetParameterFromBoxConfig(configname, 'Date')
-	key = fsm.GetParameterFromBoxConfig(configname, 'Key')
-	size = fsm.GetParameterFromBoxConfig(configname, 'Size')
-	parts = fsm.GetParameterFromBoxConfig(configname, 'Parts')
-	dirs_count = fsm.GetParameterFromBoxConfig(configname, 'Dirs')
-	files_count = fsm.GetParameterFromBoxConfig(configname, 'Files')
-	cloud_id = fsm.GetParameterFromBoxConfig(configname, 'Cloud_id')
+	dirs = fsm.GetDirsFromBox(configname)
+	files = fsm.GetFilesFromBox(configname)
 	
-	dirs = fsm.GetDirsFromBoxConfig(configname)
-	files = fsm.GetFilesFromBoxConfig(configname)
-	
-	print(f"Информация о коробке '{configname}':")
+	logger.info(f"Информация о коробке '{configname}':")
 	print(f"  Имя: {name}")
 	print( "  Описание: {}".format("\n\t\t"+about if about else about))
 	print(f"  Дата создания: {date}")
@@ -214,85 +238,58 @@ def _info(args):
 	
 	print("\nДиректории:")
 	for i, d in enumerate(dirs):
-		if((i+1)%10==0):
+		if((i)%10==0):
 			input('Нажмите Enter чтобы продолжить')
-			print('\033[A', end='')
+			print('\033[A\033[K', end='')
 		
 		print(f"  - {d}")
 	
 	print("\nФайлы:")
 	for i, f in enumerate(files):
 		filename, filesize, fileparts = f
-		if((i+1)%10==0):
+		if((i)%10==0):
 			input('Нажмите Enter чтобы продолжить')
-			print('\033[A', end='')
+			print('\033[A\033[K', end='')
 		print(f"  - {filename} (размер: {filesize} байт, части: {fileparts})")
 
-def _setabout(args):
-	if len(args) != 4:
-		logger.error("Неверное количество аргументов для установки описания.")
-		raise Exception("Неверное количество аргументов для установки описания.")
-	
-	configname = args[2]
-	about_file_path = args[3]
-	
-	if not fsm.os.path.exists(about_file_path):
-		logger.error(f"Файл {about_file_path} не существует.")
-		raise Exception(f"Файл {about_file_path} не существует.")
-	
-	with open(about_file_path, 'r', encoding='utf-8') as file:
-		about_text = file.read()
-	
-	fsm.SetBoxConfig(configname, 'About', about_text)
-	logger.info(f"Описание для '{configname}' успешно установлено из файла '{about_file_path}'.")
-
-def _help(args):
-	help_text = """
-Использование: main.py [-client|-upload|-download|-info|-setabout|-h|-help] [args]
-
-Доступные команды:
-	-client <ClientName> <api_id> <api_hash>
-		Создание и инициализация клиента Telegram.
-
-	-upload <ClientName> <chat_id> <name> <file_or_directory_paths>
-		Загрузка файлов или директорий в Telegram чат.
-
-	-download <ClientName> <config_name> <output_directory>
-		Скачивание файлов из Telegram чата с использованием конфигурационного файла.
-
-	-info <config_name>
-		Получение всей информации о заданной 'коробке' (tsb файл).
-
-	-setabout <config_name> <about_file_path>
-		Установка описания для конфигурационного файла из текстового файла.
-
-	-h, -help
-		Показать эту справочную информацию.
-	"""
-	print(help_text)
 
 def main():
-	args = sys.argv
-	if len(args) <= 1:
-		logger.error("Слишком мало аргументов.")
-		raise Exception("Слишком мало аргументов.")
-	
-	command_map = {
-		'-client': _client,
-		'-upload': _upload,
-		'-download': _download,
-		'-info': _info,
-		'-setabout': _setabout,
-		'-h': _help,
-		'-help': _help
-	}
+	main_parser = argparse.ArgumentParser()
 
-	command = args[1]
-	if command not in command_map:
-		logger.error("Неверный аргумент")
-		raise Exception("Неверный аргумент")
-	
-	command_map[command](args)
+	subparsers = main_parser.add_subparsers(dest='command', required=True)
 
-if __name__ == '__main__':
-	main()
+	upload_parser = subparsers.add_parser('upload')
+	upload_parser.add_argument('client_number', type=int)
+	upload_parser.add_argument('cloud_id', type=int)
+	upload_parser.add_argument('box_name')
+	upload_parser.add_argument('paths', nargs='+')
+	upload_parser.add_argument('-af', '--about_filepath', default=None, required=False)
+	upload_parser.set_defaults(func=_upload)
+	
+	download_parser = subparsers.add_parser('download')
+	download_parser.add_argument('client_number', type=int)
+	download_parser.add_argument('box_name')
+	download_parser.add_argument('-o', '--out_dir', default='.', required=False)
+	download_parser.set_defaults(func=_download)
+
+	client_parsers = subparsers.add_parser('client')
+	client_command_parser = client_parsers.add_subparsers(dest='client_command', required=True)
+	client_list_parser = client_command_parser.add_parser('list')
+	client_add_parser = client_command_parser.add_parser('add')
+	client_add_parser.add_argument('id', type=int)
+	client_add_parser.add_argument('hash')
+	client_del_parser = client_command_parser.add_parser('del')
+	client_del_parser.add_argument('number', type=int)
+	client_parsers.set_defaults(func=_client)
+
+
+	info_parser = subparsers.add_parser('info')
+	info_parser.add_argument('box_name', type=str)
+	info_parser.set_defaults(func=_info)
+
+	args = main_parser.parse_args()
+	#print(args)
+	args.func(args)
+
+
+if __name__ == '__main__': main()
